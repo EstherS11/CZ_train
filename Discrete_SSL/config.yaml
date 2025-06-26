@@ -1,0 +1,87 @@
+# Configuration for discrete SSL models using K-means quantization
+# Optimized for 4x H100 GPUs on cloud environment
+
+# Data paths - Updated for cloud environment
+root_dir: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/DATA/Audios"
+
+# JSON files should be placed in a specific directory (e.g., s11/json_files/)
+train_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_train_10class.json"
+valid_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_valid_10class.json"
+test_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_test_10class.json"
+
+# Cache directory for pretrained models
+cache_dir: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/pretrained_models"
+
+# Output directory for experiments
+output_base_dir: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/experiments"
+
+# Model settings
+num_classes: 10
+
+# Discrete SSL settings
+kmeans_dataset: "LibriSpeech960"
+num_clusters: 1000
+num_ssl_layers: 23
+use_all_layers: false
+ssl_layers: [7]
+embedding_dim: 256
+ssl_downsample_rate: 320
+
+# Architecture choice
+use_attention_pool: false
+
+# ECAPA settings
+ecapa_channels: [512, 512, 512, 512, 1536]
+ecapa_lin_neurons: 192
+
+# Dropout
+classifier_dropout: 0.3
+
+# Data settings - Optimized for 4x H100 GPUs
+batch_size: 128  # Total batch size (32 per GPU)
+max_length: 10.0  # seconds
+num_workers: 8
+use_balanced_sampling: true
+use_fixed_length: false
+
+# Data augmentation
+use_augmentation: true
+augmentation:
+  time_mask_prob: 0.5
+  time_mask_ratio: 0.1
+
+# Mixup
+use_mixup: true
+mixup_alpha: 1.0
+mixup_prob: 0.5
+
+# Loss
+loss_type: "focal"
+focal_gamma: 2.0
+
+# Training
+num_epochs: 40
+gradient_clip: 1.0
+early_stopping_patience: 10
+
+# Optimizer
+lr: 1.25e-4  # Base LR (will be scaled by num_gpus)
+weight_decay: 0.01
+
+# Scheduler
+scheduler_type: "cosine"
+min_lr: 1e-6
+
+# Distributed training
+distributed:
+  backend: "nccl"
+  find_unused_parameters: false
+  gradient_accumulation_steps: 1
+
+# Experiment tracking
+use_wandb: true
+wandb_project: "msp-podcast-ser-discrete-cloud"
+wandb_tags: ["discrete", "kmeans", "ssl", "distributed", "4xH100", "cloud"]
+
+# Resume training
+resume: true

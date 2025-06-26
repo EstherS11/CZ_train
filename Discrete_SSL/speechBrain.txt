@@ -1,0 +1,252 @@
+SpeechBrain DiscreteSSL 使用文档
+版本信息
+
+SpeechBrain版本: 1.0.3
+测试日期: 2024年
+测试环境: MacOS, Python 3.10.13
+
+重要发现
+1. API变更
+
+speechbrain.pretrained 已弃用，重定向到 speechbrain.inference
+ssl_quantizer 模块在新版本中不存在
+应使用 speechbrain.lobes.models.huggingface_transformers.discrete_ssl.DiscreteSSL
+
+2. DiscreteSSL 参数说明
+pythonDiscreteSSL.__init__(
+    self, 
+    save_path,                # 模型保存路径
+    ssl_model,                # SSL模型实例（Wav2Vec2/HuBERT/WavLM）
+    kmeans_dataset,           # K-means数据集名称
+    vocoder_repo_id,          # HiFi-GAN vocoder仓库ID（不是kmeans_repo_id！）
+    num_clusters=1000,        # 聚类数
+    layers_num=None,          # 要下载的层列表，None表示所有可用层
+    device='cpu',             # 计算设备
+    sample_rate=16000         # 采样率
+)
+3. 支持的模型配置
+SSL模型HuggingFace模型K-Means数据集聚类数支持层VocoderWav2Vec2facebook/wav2vec2-largeLibriSpeech96010001,3,7,12,18,23speechbrain/hifigan-wav2vec2-k1000-LibriTTSHuBERTfacebook/hubert-large-ll60kLibriSpeech96010001,3,7,12,18,23speechbrain/hifigan-hubert-k1000-LibriTTSWavLMmicrosoft/wavlm-largeLibriSpeech96010001,3,7,12,18,23speechbrain/hifigan-wavlm-k1000-LibriTTS
+可用的K-means配置
+完整层支持（1-24层）
+
+LibriSpeech-100-360-500
+
+wav2vec2: 1000聚类
+hubert: 1000, 2000聚类
+wavlm: 1000, 2000聚类
+
+
+
+部分层支持（关键层）
+
+LibriSpeech960: 层 [1,3,7,12,18,23]
+LibriSpeech100: 层 [1,3,7,12,18,23]
+其他数据集: CV-AR, LJSpeech, voxceleb1等
+
+使用示例
+基础使用
+pythonimport torch
+from speechbrain.lobes.models.huggingface_transformers.discrete_ssl import DiscreteSSL
+from speechbrain.lobes.models.huggingface_transformers.wav2vec2 import Wav2Vec2
+
+# 1. 创建SSL模型
+ssl_model = Wav2Vec2(
+    source="facebook/wav2vec2-large",  # 注意：使用large而不是base
+    save_path="./cache/wav2vec2",
+    output_all_hiddens=True  # 必须设置为True！
+)
+
+# 2. 创建DiscreteSSL包装器
+discrete_ssl = DiscreteSSL(
+    save_path="./cache/wav2vec2",
+    ssl_model=ssl_model,
+    kmeans_dataset="LibriSpeech960",
+    vocoder_repo_id="speechbrain/hifigan-wav2vec2-k1000-LibriTTS",
+    num_clusters=1000,
+    layers_num=None
+)
+
+# 3. 编码音频
+audio = torch.randn(1, 16000)  # 1秒音频
+SSL_layers = [7]  # 选择第7层
+
+tokens, embeddings, processed_tokens = discrete_ssl.encode(
+    audio,
+    SSL_layers=SSL_layers,
+    deduplicates=[False],
+    bpe_tokenizers=[None]
+)
+多模型支持
+python# 模型配置映射
+MODEL_CONFIGS = {
+    "wav2vec2": {
+        "source": "facebook/wav2vec2-large",
+        "model_class": Wav2Vec2,
+        "vocoder": "speechbrain/hifigan-wav2vec2-k1000-LibriTTS"
+    },
+    "hubert": {
+        "source": "facebook/hubert-large-ll60k",
+        "model_class": HuBERT,
+        "vocoder": "speechbrain/hifigan-hubert-k1000-LibriTTS"
+    },
+    "wavlm": {
+        "source": "microsoft/wavlm-large",
+        "model_class": WavLM,
+        "vocoder": "speechbrain/hifigan-wavlm-k1000-LibriTTS"
+    }
+}
+下载模型（离线使用）
+download_models.py
+pythonimport os
+import yaml
+from speechbrain.lobes.models.huggingface_transformers.discrete_ssl import DiscreteSSL
+from speechbrain.lobes.models.huggingface_transformers.wav2vec2 import Wav2Vec2
+from speechbrain.lobes.models.huggingface_transformers.hubert import HuBERT
+from speechbrain.lobes.models.huggingface_transformers.wavlm import WavLM
+
+def download_ssl_models(config_path, model_types=['wav2vec2', 'hubert', 'wavlm']):
+    """下载所有需要的模型和K-means文件"""
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # 模型配置
+    MODEL_CONFIGS = {
+        "wav2vec2": {
+            "source": "facebook/wav2vec2-large",
+            "model_class": Wav2Vec2,
+            "vocoder": "speechbrain/hifigan-wav2vec2-k1000-LibriTTS"
+        },
+        "hubert": {
+            "source": "facebook/hubert-large-ll60k", 
+            "model_class": HuBERT,
+            "vocoder": "speechbrain/hifigan-hubert-k1000-LibriTTS"
+        },
+        "wavlm": {
+            "source": "microsoft/wavlm-large",
+            "model_class": WavLM,
+            "vocoder": "speechbrain/hifigan-wavlm-k1000-LibriTTS"
+        }
+    }
+    
+    cache_dir = config.get('cache_dir', 'pretrained_models')
+    
+    for model_type in model_types:
+        if model_type not in MODEL_CONFIGS:
+            continue
+            
+        cfg = MODEL_CONFIGS[model_type]
+        save_path = os.path.join(cache_dir, model_type)
+        
+        print(f"\n下载 {model_type}...")
+        
+        # 1. 下载SSL基础模型
+        ssl_model = cfg["model_class"](
+            source=cfg["source"],
+            save_path=save_path,
+            output_all_hiddens=True
+        )
+        
+        # 2. 下载K-means模型
+        discrete_ssl = DiscreteSSL(
+            save_path=save_path,
+            ssl_model=ssl_model,
+            kmeans_dataset="LibriSpeech960",  # 或其他支持的数据集
+            vocoder_repo_id=cfg["vocoder"],
+            num_clusters=1000
+        )
+        
+        print(f"✓ {model_type} 下载完成")
+项目集成建议
+config.yaml 配置
+yaml# Discrete SSL settings
+ssl_model_type: "wav2vec2"  # wav2vec2, hubert, wavlm
+kmeans_dataset: "LibriSpeech960"  # 推荐使用
+num_clusters: 1000
+num_ssl_layers: 23  # 最大支持层
+use_all_layers: false  # false=单层，true=多层
+ssl_layers: [7]  # 使用哪些层（单层推荐7或12）
+ssl_downsample_rate: 320
+
+# 模型配置
+embedding_dim: 256
+use_attention_pool: false
+ecapa_channels: [512, 512, 512, 512, 1536]
+ecapa_lin_neurons: 192
+模型代码关键部分
+pythonclass DiscreteSSLModel(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        
+        # SSL模型映射
+        MODEL_CONFIGS = {
+            "wav2vec2": {
+                "source": "facebook/wav2vec2-large",
+                "model_class": Wav2Vec2,
+                "vocoder": "speechbrain/hifigan-wav2vec2-k1000-LibriTTS"
+            },
+            # ... 其他模型配置
+        }
+        
+        ssl_model_type = config['ssl_model_type']
+        cfg = MODEL_CONFIGS[ssl_model_type]
+        
+        # 创建SSL模型
+        self.ssl_model = cfg["model_class"](
+            source=cfg["source"],
+            save_path=save_path,
+            output_all_hiddens=True
+        )
+        
+        # 创建离散SSL
+        self.discrete_ssl = DiscreteSSL(
+            save_path=save_path,
+            ssl_model=self.ssl_model,
+            kmeans_dataset=config.get('kmeans_dataset', 'LibriSpeech960'),
+            vocoder_repo_id=cfg["vocoder"],
+            num_clusters=config.get('num_clusters', 1000)
+        )
+        
+    def extract_discrete_tokens(self, waveforms):
+        """提取离散tokens"""
+        with torch.no_grad():
+            if self.use_all_layers:
+                SSL_layers = self.config.get('ssl_layers', [1,3,7,12,18,23])
+            else:
+                SSL_layers = [self.config.get('ssl_layers', [7])[0]]
+            
+            tokens, embeddings, _ = self.discrete_ssl.encode(
+                waveforms,
+                SSL_layers=SSL_layers,
+                deduplicates=[False] * len(SSL_layers),
+                bpe_tokenizers=[None] * len(SSL_layers)
+            )
+        return tokens
+
+        常见问题
+1. 模型下载失败
+
+检查网络连接
+使用HuggingFace镜像：export HF_ENDPOINT=https://hf-mirror.com
+
+2. K-means文件找不到
+
+确认使用支持的数据集名称（如LibriSpeech960）
+检查聚类数是否匹配（1000或2000）
+
+3. 内存不足
+
+使用单层而不是所有层
+减小batch size
+使用CPU进行下载：device='cpu'
+
+4. 层数不匹配
+
+LibriSpeech960只支持[1,3,7,12,18,23]
+如需全部24层，使用LibriSpeech-100-360-500
+
+性能建议
+
+开始测试：使用单层（第7层）+ LibriSpeech960
+优化阶段：尝试层组合 [7,12] 或 [7,12,18]
+计算资源充足：可以使用所有层或LibriSpeech-100-360-500

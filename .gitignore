@@ -1,0 +1,70 @@
+# 数据目录（太大，不上传）
+DATA/
+
+# 压缩包
+*.tar.gz
+*.zip
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# 虚拟环境
+ser_env/
+msp_env/
+msp/
+venv/
+env/
+
+# 模型文件
+models/
+*.pth
+*.pt
+*.h5
+*.pt
+*.ckpt
+*.pkl
+
+# 日志文件
+*.log
+slurm-*.out
+slurm-*.err
+
+# 临时文件
+.DS_Store
+*.tmp
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 结果目录（包含模型缓存和检查点）
+results/
+**/results/
+
+# HuggingFace缓存
+**/.locks/
+**/ssl_checkpoint/
+**/kmeans_checkpoint/
+**/*.safetensors
+**/*.safetensors.index.json
+**/*.incomplete
+**/*.bin
+
+# 额外的模型格式
+**/*.h5
+**/*.hdf5
+**/*.model
+**/*.onnx
+**/*.tflite
+
+# 预处理后的数据
+**/*.npy
+**/*.npz
+**/*.hdf5
+**/*.h5
+**/*.csv
+**/*.json
+
