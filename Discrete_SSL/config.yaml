@@ -4,10 +4,10 @@
 # Data paths - Updated for cloud environment
 root_dir: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/DATA/Audios"
 
-# JSON files should be placed in a specific directory (e.g., s11/json_files/)
-train_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_train_10class.json"
-valid_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_valid_10class.json"
-test_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/json_files/msp_test_10class.json"
+# JSON files - 修改为实际路径（在CZ_train目录下）
+train_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/CZ_train/msp_train_10class.json"
+valid_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/CZ_train/msp_valid_10class.json"
+test_json: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/CZ_train/msp_test_10class.json"
 
 # Cache directory for pretrained models
 cache_dir: "/inspire/hdd/ws-f4d69b29-e0a5-44e6-bd92-acf4de9990f0/public-project/zhangfanrui-240108110056/s11/pretrained_models"
@@ -79,7 +79,7 @@ distributed:
   gradient_accumulation_steps: 1
 
 # Experiment tracking
-use_wandb: true
+use_wandb: false  # 如果计算区没有网络，设为false
 wandb_project: "msp-podcast-ser-discrete-cloud"
 wandb_tags: ["discrete", "kmeans", "ssl", "distributed", "4xH100", "cloud"]
 
